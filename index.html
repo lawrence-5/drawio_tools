@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>draw.io Color Mapping Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f3f5f8;
+      --surface: #ffffff;
+      --surface-soft: #f7f8fa;
+      --text: #1f2937;
+      --muted: #667085;
+      --line: #d9dee7;
+      --line-strong: #c2c9d5;
+      --brand: #1769e0;
+      --brand-hover: #0f58c5;
+      --brand-soft: #e8f1ff;
+      --success: #137a4a;
+      --warning: #9a5b00;
+      --danger: #b42318;
+      --shadow: 0 10px 30px rgba(25, 35, 55, 0.08);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% -10%, rgba(23, 105, 224, 0.13), transparent 28rem),
+        var(--page);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    .shell {
+      width: min(1060px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 44px 0 64px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      display: grid;
+      grid-template-columns: repeat(2, 18px);
+      gap: 4px;
+      padding: 10px;
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .logo i { width: 18px; height: 18px; border-radius: 5px; }
+    .logo i:nth-child(1) { background: #1769e0; }
+    .logo i:nth-child(2) { background: #75a7ed; }
+    .logo i:nth-child(3) { background: #293241; }
+    .logo i:nth-child(4) { background: #d9e7fb; }
+
+    h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); line-height: 1.2; letter-spacing: -0.025em; }
+    .subtitle { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(194, 201, 213, 0.7);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+      min-height: 280px;
+      padding: 36px;
+      text-align: center;
+      border: 2px dashed var(--line-strong);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+
+    .drop-zone.dragging {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      transform: translateY(-2px);
+    }
+
+    .drop-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--brand);
+      background: var(--brand-soft);
+    }
+
+    .drop-icon svg { width: 28px; height: 28px; }
+    .drop-zone h2 { margin: 0 0 8px; font-size: 20px; }
+    .drop-zone p { margin: 0 0 20px; color: var(--muted); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 9px 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--surface);
+      font-weight: 600;
+    }
+
+    .btn:hover { background: var(--surface-soft); }
+    .btn-primary { color: #fff; border-color: var(--brand); background: var(--brand); }
+    .btn-primary:hover { background: var(--brand-hover); }
+    .btn-ghost { min-height: 36px; padding: 6px 11px; font-size: 13px; }
+    .file-input {
+      width: 132px;
+      color: transparent;
+      border: 0;
+      background: transparent;
+    }
+    .file-input::file-selector-button {
+      min-height: 42px;
+      padding: 9px 16px;
+      border: 1px solid var(--brand);
+      border-radius: 10px;
+      color: #fff;
+      background: var(--brand);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .file-input::file-selector-button:hover { background: var(--brand-hover); }
+
+    .workspace { display: none; }
+    .workspace.active { display: block; }
+
+    .file-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+
+    .file-main { min-width: 0; }
+    .file-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-meta { margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .notice {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 15px;
+      border: 1px solid #f2c879;
+      border-radius: 12px;
+      color: #744500;
+      background: #fff6df;
+      line-height: 1.45;
+    }
+    .notice.visible { display: block; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric { padding: 16px 18px; }
+    .metric strong { display: block; font-size: 24px; line-height: 1.15; }
+    .metric span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; }
+
+    .panel { overflow: hidden; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2 { margin: 0; font-size: 18px; }
+    .panel-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .background-control { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; }
+    .background-control label { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+    input[type="color"] {
+      width: 42px;
+      height: 36px;
+      padding: 3px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      background: var(--surface);
+    }
+
+    .mapping-list { padding: 8px 20px 2px; }
+    .mapping-row { border-bottom: 1px solid var(--line); }
+    .mapping-row:last-child { border-bottom: 0; }
+    .mapping-main {
+      display: grid;
+      grid-template-columns: minmax(145px, 1fr) 24px minmax(135px, .95fr) 24px minmax(225px, 1.35fr) minmax(112px, .75fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 0;
+    }
+
+    .color-source, .color-current, .color-target { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .color-target { flex-wrap: wrap; }
+    .swatch {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      border: 1px solid rgba(0,0,0,.14);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.35);
+    }
+    .swatch.auto { background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.28) 0 6px, rgba(0,0,0,.08) 6px 12px); }
+    .color-text { min-width: 0; }
+    .color-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-weight: 700; }
+    .example { margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mode-label { margin-bottom: 3px; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .current-note { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .mode-contrast { margin-top: 4px; color: var(--success); font-size: 12px; font-weight: 600; }
+    .mode-contrast.low { color: var(--danger); }
+    .arrow { text-align: center; color: var(--muted); }
+
+    .target-preview {
+      min-width: 94px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      text-align: center;
+      font-weight: 700;
+      transition: background .15s ease, color .15s ease;
+    }
+    .color-target { flex-direction: column; align-items: stretch; gap: 7px; }
+    .mapping-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .change-line { display: grid; grid-template-columns: 46px 40px minmax(70px, 1fr); align-items: center; gap: 8px; }
+    .target-picker { width: 40px !important; flex: 0 0 40px; }
+    .target-picker:disabled { opacity: .38; }
+    .mode-name { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .mapping-row:not(.enabled) .target-preview { opacity: .42; }
+
+    .contrast { font-size: 12px; line-height: 1.35; }
+    .contrast strong { display: block; font-size: 13px; }
+    .contrast.good { color: var(--success); }
+    .contrast.low { color: var(--danger); }
+    .contrast-line + .contrast-line { margin-top: 7px; }
+    .usage { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; }
+
+    details.overrides { margin: -3px 0 13px 49px; }
+    details.overrides summary { width: fit-content; cursor: pointer; color: var(--brand); font-size: 12px; }
+    .override-list { margin-top: 9px; padding: 7px 12px; border-radius: 10px; background: var(--surface-soft); }
+    .override-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) auto auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 43px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .override-row:last-child { border-bottom: 0; }
+    .override-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .override-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); }
+    .override-color { width: 36px !important; height: 32px !important; }
+    .override-colors { display: flex; align-items: center; gap: 10px; }
+    .override-colors label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+
+    .panel-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+    .foot-note { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    .empty-colors { padding: 42px 20px; text-align: center; color: var(--muted); }
+
+    .icon-panel { margin-top: 16px; }
+    .icon-list { padding: 4px 20px; }
+    .icon-row {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.2fr) minmax(130px, .9fr) minmax(120px, .8fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .icon-row:last-child { border-bottom: 0; }
+    .icon-name { min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .icon-meta { color: var(--muted); font-size: 12px; }
+    .icon-fill { display: inline-flex; align-items: center; gap: 9px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .icon-fill .swatch { width: 30px; height: 30px; flex-basis: 30px; border-radius: 8px; }
+    .icon-empty { padding: 28px 20px; color: var(--muted); text-align: center; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 10;
+      transform: translate(-50%, 14px);
+      padding: 11px 15px;
+      border-radius: 10px;
+      color: #fff;
+      background: #243040;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.error { background: var(--danger); }
+
+    @media (max-width: 780px) {
+      .shell { width: min(100% - 20px, 1060px); padding-top: 28px; }
+      .summary { grid-template-columns: 1fr; }
+      .mapping-main { grid-template-columns: minmax(120px, 1fr) 20px minmax(120px, 1fr) 20px minmax(230px, 1.3fr); }
+      .contrast { grid-column: 5; }
+      .usage { grid-column: 1 / -1; text-align: left; padding-left: 49px; }
+      .panel-head { align-items: flex-start; flex-direction: column; }
+      .icon-row { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .hero { align-items: flex-start; }
+      .logo { display: none; }
+      .file-bar, .panel-foot { align-items: stretch; flex-direction: column; }
+      .file-actions { width: 100%; }
+      .file-actions .btn { flex: 1; }
+      .mapping-list { padding-left: 14px; padding-right: 14px; }
+      .mapping-main { grid-template-columns: 1fr 16px 1fr; gap: 8px; }
+      .arrow-new { display: none; }
+      .color-target { grid-column: 1 / -1; grid-row: 2; }
+      .contrast { grid-column: 1 / -1; grid-row: 3; }
+      .swatch { width: 32px; height: 32px; flex-basis: 32px; }
+      .color-code { font-size: 12px; }
+      .example { display: none; }
+      .target-preview { min-width: 0; padding: 7px 6px; font-size: 12px; }
+      details.overrides { margin-left: 0; }
+      .override-row { grid-template-columns: 1fr auto; }
+      .override-colors { grid-column: 1 / -1; }
+      .icon-row { grid-template-columns: 1fr; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div>
+        <h1>draw.io Color Mapping Editor</h1>
+        <p class="subtitle">Edit light and dark text-color mappings and find icons with non-transparent backgrounds.</p>
+      </div>
+    </header>
+
+    <section id="dropZone" class="drop-zone" aria-label="Import a draw.io file">
+      <div>
+        <div class="drop-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2>Drop a .drawio or .xml file here</h2>
+        <p>Supports compressed files, uncompressed files, and multiple pages. Files stay on this device.</p>
+        <input id="fileInput" class="file-input" type="file" aria-label="Choose file" accept=".drawio,.xml,text/xml,application/xml">
+      </div>
+    </section>
+
+    <section id="workspace" class="workspace" aria-live="polite">
+      <div class="file-bar card">
+        <div class="file-main">
+          <div id="fileName" class="file-name"></div>
+          <div id="fileMeta" class="file-meta"></div>
+        </div>
+        <div class="file-actions">
+          <button id="changeFile" class="btn btn-ghost" type="button">Change file</button>
+          <button id="resetMappings" class="btn btn-ghost" type="button">Reset changes</button>
+        </div>
+      </div>
+
+      <div id="notice" class="notice"></div>
+
+      <div class="summary">
+        <div class="metric card"><strong id="pageCount">0</strong><span>Pages</span></div>
+        <div class="metric card"><strong id="colorCount">0</strong><span>Text color mappings</span></div>
+        <div class="metric card"><strong id="usageCount">0</strong><span>Text locations</span></div>
+        <div class="metric card"><strong id="iconCount">0</strong><span>Opaque icon backgrounds</span></div>
+      </div>
+
+      <section class="panel card">
+        <div class="panel-head">
+          <div>
+            <h2>Text color mappings</h2>
+            <p>Select a mapping to edit its light and dark colors together. Nothing is selected automatically.</p>
+          </div>
+          <div class="background-control">
+            <label>Light background <input id="lightBackground" type="color" value="#ffffff"></label>
+            <label>Dark background <input id="darkBackground" type="color" value="#1f2328"></label>
+          </div>
+        </div>
+        <div id="mappingList" class="mapping-list"></div>
+        <div class="panel-foot">
+          <div class="foot-note">The original file is never overwritten. Selected mappings are saved as explicit <code>light-dark()</code> pairs.</div>
+          <button id="downloadButton" class="btn btn-primary" type="button">Generate new file</button>
+        </div>
+      </section>
+
+      <section class="panel card icon-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Non-transparent icon backgrounds</h2>
+            <p>Icons with an explicit visible <code>fillColor</code> or <code>imageBackground</code> are listed across every page.</p>
+          </div>
+        </div>
+        <div id="iconList" class="icon-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const $ = (selector) => document.querySelector(selector);
+      const elements = {
+        dropZone: $('#dropZone'), fileInput: $('#fileInput'), workspace: $('#workspace'),
+        fileName: $('#fileName'), fileMeta: $('#fileMeta'), notice: $('#notice'),
+        pageCount: $('#pageCount'), colorCount: $('#colorCount'), usageCount: $('#usageCount'), iconCount: $('#iconCount'),
+        mappingList: $('#mappingList'), lightBackground: $('#lightBackground'), darkBackground: $('#darkBackground'),
+        iconList: $('#iconList'),
+        changeFile: $('#changeFile'), resetMappings: $('#resetMappings'),
+        downloadButton: $('#downloadButton'), toast: $('#toast')
+      };
+
+      const state = {
+        file: null,
+        sourceText: '',
+        outerDocument: null,
+        directModel: false,
+        hadXmlDeclaration: false,
+        pages: [],
+        colors: new Map(),
+        opaqueIcons: [],
+        mappings: new Map(),
+        overrides: new Map(),
+        warnings: [],
+        lightBackground: '#FFFFFF',
+        darkBackground: '#1F2328'
+      };
+
+      const XML_SERIALIZER = new XMLSerializer();
+
+      function showToast(message, isError = false) {
+        elements.toast.textContent = message;
+        elements.toast.className = `toast show${isError ? ' error' : ''}`;
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => { elements.toast.className = 'toast'; }, 2600);
+      }
+
+      function parseXml(text, label = 'XML') {
+        const doc = new DOMParser().parseFromString(text, 'application/xml');
+        const error = doc.querySelector('parsererror');
+        if (error) throw new Error(`${label} could not be parsed: ${error.textContent.trim().slice(0, 160)}`);
+        return doc;
+      }
+
+      function localName(element) {
+        return (element && (element.localName || element.nodeName) || '').replace(/^.*:/, '');
+      }
+
+      function toBytesFromBase64(base64) {
+        const binary = atob(base64.replace(/\s+/g, ''));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
+
+      function toBase64(bytes) {
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      }
+
+      async function transformStream(bytes, StreamClass) {
+        const stream = new Blob([bytes]).stream().pipeThrough(new StreamClass('deflate-raw'));
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+      }
+
+      async function decompressDiagram(payload) {
+        if (typeof DecompressionStream === 'undefined') {
+          throw new Error('This browser cannot read compressed draw.io pages. Use a current version of Chrome, Edge, or Safari.');
+        }
+        const inflated = await transformStream(toBytesFromBase64(payload), DecompressionStream);
+        return decodeURIComponent(new TextDecoder().decode(inflated));
+      }
+
+      async function compressDiagram(xml) {
+        if (typeof CompressionStream === 'undefined') {
+          throw new Error('This browser cannot write compressed draw.io pages. Use a current version of Chrome, Edge, or Safari.');
+        }
+        const encoded = new TextEncoder().encode(encodeURIComponent(xml));
+        return toBase64(await transformStream(encoded, CompressionStream));
+      }
+
+      function normalizeHex(value) {
+        if (!value) return null;
+        let hex = String(value).trim().toUpperCase();
+        if (hex === 'DEFAULT') return '#000000';
+        if (!hex.startsWith('#')) return null;
+        if (/^#[0-9A-F]{3}$/.test(hex)) {
+          hex = '#' + hex.slice(1).split('').map(char => char + char).join('');
+        }
+        return /^#[0-9A-F]{6}$/.test(hex) ? hex : null;
+      }
+
+      function parseColorValue(value) {
+        if (!value) return null;
+        const raw = String(value).trim();
+        const pair = raw.match(/^light-dark\(\s*(#[0-9a-f]{3,6})\s*,\s*(#[0-9a-f]{3,6})\s*\)$/i);
+        if (pair) {
+          const light = normalizeHex(pair[1]);
+          const dark = normalizeHex(pair[2]);
+          return light && dark ? { light, dark } : null;
+        }
+        const light = normalizeHex(raw);
+        return light ? { light, dark: null } : null;
+      }
+
+      function readStyleValue(style, key) {
+        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = String(style || '').match(new RegExp(`(?:^|;)${escaped}=([^;]+)`, 'i'));
+        return match ? match[1].trim() : null;
+      }
+
+      function setStyleValue(style, key, value) {
+        const source = String(style || '');
+        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(^|;)${escaped}=[^;]*`, 'i');
+        if (regex.test(source)) return source.replace(regex, `$1${key}=${value}`);
+        return `${source}${source && !source.endsWith(';') ? ';' : ''}${key}=${value};`;
+      }
+
+      function labelTarget(cell) {
+        if (cell.hasAttribute('value')) return { element: cell, attribute: 'value', value: cell.getAttribute('value') || '' };
+        const parent = cell.parentElement;
+        if (parent && localName(parent) !== 'root' && parent.hasAttribute('label')) {
+          return { element: parent, attribute: 'label', value: parent.getAttribute('label') || '' };
+        }
+        return { element: cell, attribute: 'value', value: '' };
+      }
+
+      function plainText(html) {
+        const holder = document.createElement('div');
+        holder.innerHTML = html || '';
+        return (holder.textContent || '').replace(/\s+/g, ' ').trim();
+      }
+
+      function extractInlineColors(html) {
+        const results = [];
+        const cssRegex = /(?:^|[;"'\s])color\s*:\s*(light-dark\(\s*#[0-9a-f]{3,6}\s*,\s*#[0-9a-f]{3,6}\s*\)|#[0-9a-f]{3,6})/gi;
+        let match;
+        while ((match = cssRegex.exec(html))) {
+          const parsed = parseColorValue(match[1]);
+          if (parsed) results.push(parsed);
+        }
+        const fontRegex = /<font\b[^>]*\scolor\s*=\s*(["'])([^"']+)\1[^>]*>/gi;
+        while ((match = fontRegex.exec(html))) {
+          const parsed = parseColorValue(match[2]);
+          if (parsed) results.push(parsed);
+        }
+        return results;
+      }
+
+      function addOccurrence(page, color, dark, example, kind) {
+        let entry = state.colors.get(color);
+        if (!entry) {
+          entry = {
+            color,
+            count: 0,
+            explicitDarkCount: 0,
+            automaticDarkCount: 0,
+            pages: new Map(),
+            pageDark: new Map(),
+            examples: new Set(),
+            existingDark: new Set(),
+            kinds: new Set()
+          };
+          state.colors.set(color, entry);
+        }
+        entry.count += 1;
+        entry.pages.set(page.id, (entry.pages.get(page.id) || 0) + 1);
+        if (!entry.pageDark.has(page.id)) {
+          entry.pageDark.set(page.id, { count: 0, automaticCount: 0, explicitDark: new Set() });
+        }
+        const pageState = entry.pageDark.get(page.id);
+        pageState.count += 1;
+        if (example && entry.examples.size < 3) entry.examples.add(example.slice(0, 70));
+        if (dark) {
+          entry.explicitDarkCount += 1;
+          entry.existingDark.add(dark);
+          pageState.explicitDark.add(dark);
+        } else {
+          entry.automaticDarkCount += 1;
+          pageState.automaticCount += 1;
+        }
+        entry.kinds.add(kind);
+      }
+
+      function iconKind(style) {
+        const shape = (readStyleValue(style, 'shape') || '').toLowerCase();
+        if (readStyleValue(style, 'image') || shape === 'image') return 'Image icon';
+        if (shape.startsWith('mxgraph.')) return 'Stencil icon';
+        if (readStyleValue(style, 'icon')) return 'Icon';
+        return null;
+      }
+
+      function visibleFill(style) {
+        const candidates = [
+          ['fillColor', readStyleValue(style, 'fillColor')],
+          ['imageBackground', readStyleValue(style, 'imageBackground')]
+        ];
+        const match = candidates.find(([, value]) => value && !/^(none|transparent)$/i.test(value.trim()));
+        if (!match) return null;
+        const opacity = Number(readStyleValue(style, 'opacity') || 100);
+        const fillOpacity = Number(readStyleValue(style, 'fillOpacity') || 100);
+        if (opacity <= 0 || fillOpacity <= 0) return null;
+        return { property: match[0], color: match[1], opacity: Math.min(opacity, fillOpacity) };
+      }
+
+      function scanOpaqueIcon(page, cell) {
+        const style = cell.getAttribute('style') || '';
+        const kind = iconKind(style);
+        const fill = kind && visibleFill(style);
+        if (!fill) return;
+        const target = labelTarget(cell);
+        const label = plainText(target.value) || `Cell ${cell.getAttribute('id') || 'without ID'}`;
+        state.opaqueIcons.push({
+          pageId: page.id,
+          pageName: page.name,
+          cellId: cell.getAttribute('id') || '',
+          label,
+          kind,
+          fillColor: fill.color,
+          fillProperty: fill.property,
+          opacity: fill.opacity
+        });
+      }
+
+      function scanPage(page) {
+        const cells = Array.from(page.modelElement.getElementsByTagName('*')).filter(el => localName(el) === 'mxCell');
+        for (const cell of cells) {
+          scanOpaqueIcon(page, cell);
+          const target = labelTarget(cell);
+          const text = plainText(target.value);
+          if (!text) continue;
+
+          const inline = extractInlineColors(target.value);
+          inline.forEach(color => addOccurrence(page, color.light, color.dark, text, 'rich'));
+
+          const rawFontColor = readStyleValue(cell.getAttribute('style'), 'fontColor');
+          const parsedFontColor = parseColorValue(rawFontColor);
+          if (parsedFontColor) {
+            addOccurrence(page, parsedFontColor.light, parsedFontColor.dark, text, 'style');
+          } else if (!inline.length && !rawFontColor) {
+            addOccurrence(page, '#000000', null, text, 'default');
+          } else if (rawFontColor && !parsedFontColor) {
+            state.warnings.push(`Page “${page.name}” contains an unsupported text color: ${rawFontColor}`);
+          }
+        }
+      }
+
+      function hexToRgb(hex) {
+        const value = normalizeHex(hex);
+        if (!value) return null;
+        return {
+          r: parseInt(value.slice(1, 3), 16),
+          g: parseInt(value.slice(3, 5), 16),
+          b: parseInt(value.slice(5, 7), 16)
+        };
+      }
+
+      function rgbToHex({ r, g, b }) {
+        const part = value => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0');
+        return `#${part(r)}${part(g)}${part(b)}`.toUpperCase();
+      }
+
+      function rgbToHsl({ r, g, b }) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0;
+        const l = (max + min) / 2;
+        if (max !== min) {
+          const d = max - min;
+          s = l > .5 ? d / (2 - max - min) : d / (max + min);
+          if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+          else if (max === g) h = (b - r) / d + 2;
+          else h = (r - g) / d + 4;
+          h /= 6;
+        }
+        return { h, s, l };
+      }
+
+      function hslToRgb({ h, s, l }) {
+        if (s === 0) return { r: l * 255, g: l * 255, b: l * 255 };
+        const hue = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+        const q = l < .5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        return { r: hue(p, q, h + 1 / 3) * 255, g: hue(p, q, h) * 255, b: hue(p, q, h - 1 / 3) * 255 };
+      }
+
+      function luminance(hex) {
+        const rgb = hexToRgb(hex);
+        if (!rgb) return 0;
+        const channel = value => {
+          value /= 255;
+          return value <= .03928 ? value / 12.92 : Math.pow((value + .055) / 1.055, 2.4);
+        };
+        return .2126 * channel(rgb.r) + .7152 * channel(rgb.g) + .0722 * channel(rgb.b);
+      }
+
+      function contrastRatio(a, b) {
+        const l1 = luminance(a), l2 = luminance(b);
+        return (Math.max(l1, l2) + .05) / (Math.min(l1, l2) + .05);
+      }
+
+      function automaticDarkColor(light) {
+        const hsl = rgbToHsl(hexToRgb(light));
+        const adaptedLightness = Math.max(.04, Math.min(.96, .93 - .86 * hsl.l));
+        return rgbToHex(hslToRgb({ h: hsl.h, s: Math.min(hsl.s, .82), l: adaptedLightness }));
+      }
+
+      function suggestReadableColor(color, background) {
+        if (contrastRatio(color, background) >= 4.5) return normalizeHex(color);
+        const hsl = rgbToHsl(hexToRgb(color));
+        const backgroundIsLight = luminance(background) > .5;
+        if (backgroundIsLight) {
+          for (let l = Math.min(hsl.l, .48); l >= .04; l -= .02) {
+            const candidate = rgbToHex(hslToRgb({ h: hsl.h, s: Math.min(hsl.s, .82), l }));
+            if (contrastRatio(candidate, background) >= 4.5) return candidate;
+          }
+          return '#000000';
+        }
+        for (let l = Math.max(hsl.l, .52); l <= .96; l += .02) {
+          const candidate = rgbToHex(hslToRgb({ h: hsl.h, s: Math.min(hsl.s, .82), l }));
+          if (contrastRatio(candidate, background) >= 4.5) return candidate;
+        }
+        return '#FFFFFF';
+      }
+
+      function initializeMappings() {
+        state.mappings.clear();
+        state.overrides.clear();
+        for (const entry of state.colors.values()) {
+          const current = currentDarkState(entry);
+          state.mappings.set(entry.color, {
+            light: entry.color,
+            dark: current.color,
+            enabled: false
+          });
+        }
+      }
+
+      async function loadDrawioDocument(sourceText) {
+        const outerDocument = parseXml(sourceText, 'The draw.io file');
+        let directModel = false;
+        const pages = [];
+        const root = outerDocument.documentElement;
+        const rootName = localName(root);
+        if (rootName === 'mxGraphModel') {
+          directModel = true;
+          pages.push({ id: 'page-1', index: 0, name: 'Page-1', diagramElement: null, modelDocument: outerDocument, modelElement: root, compressed: false });
+        } else if (rootName === 'mxfile') {
+          const diagrams = Array.from(root.children).filter(child => localName(child) === 'diagram');
+          if (!diagrams.length) throw new Error('No draw.io pages were found in this file.');
+          for (let index = 0; index < diagrams.length; index += 1) {
+            const diagram = diagrams[index];
+            const firstChild = Array.from(diagram.children).find(child => localName(child) === 'mxGraphModel');
+            if (firstChild) {
+              pages.push({
+                id: diagram.getAttribute('id') || `page-${index + 1}`,
+                index,
+                name: diagram.getAttribute('name') || `Page-${index + 1}`,
+                diagramElement: diagram,
+                modelDocument: outerDocument,
+                modelElement: firstChild,
+                compressed: false
+              });
+            } else {
+              const payload = (diagram.textContent || '').trim();
+              if (!payload) throw new Error(`Page “${diagram.getAttribute('name') || index + 1}” is empty.`);
+              const modelXml = await decompressDiagram(payload);
+              const modelDocument = parseXml(modelXml, `Page “${diagram.getAttribute('name') || index + 1}”`);
+              pages.push({
+                id: diagram.getAttribute('id') || `page-${index + 1}`,
+                index,
+                name: diagram.getAttribute('name') || `Page-${index + 1}`,
+                diagramElement: diagram,
+                modelDocument,
+                modelElement: modelDocument.documentElement,
+                compressed: true
+              });
+            }
+          }
+        } else {
+          throw new Error('This is not a valid draw.io XML file.');
+        }
+        return { outerDocument, directModel, pages };
+      }
+
+      async function parseFile(file) {
+        state.file = file;
+        state.sourceText = await file.text();
+        state.hadXmlDeclaration = /^\s*<\?xml/i.test(state.sourceText);
+        const loaded = await loadDrawioDocument(state.sourceText);
+        state.outerDocument = loaded.outerDocument;
+        state.directModel = loaded.directModel;
+        state.pages = loaded.pages;
+        state.colors.clear();
+        state.opaqueIcons = [];
+        state.warnings = [];
+
+        state.pages.forEach(scanPage);
+        initializeMappings();
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
+      }
+
+      function overrideKey(pageId, color) { return `${pageId}::${color}`; }
+
+      function resolveMapping(pageId, color) {
+        const override = state.overrides.get(overrideKey(pageId, color));
+        const mapping = state.mappings.get(color);
+        if (override) return { light: override.light, dark: override.dark, enabled: true };
+        return mapping && mapping.enabled ? mapping : null;
+      }
+
+      function currentDarkState(entry, pageId = null) {
+        const automatic = automaticDarkColor(entry.color);
+        if (pageId) {
+          const pageState = entry.pageDark.get(pageId);
+          if (pageState && pageState.automaticCount === 0 && pageState.explicitDark.size === 1) {
+            return { mode: 'Explicit', color: Array.from(pageState.explicitDark)[0] };
+          }
+          if (pageState && pageState.automaticCount === pageState.count) {
+            return { mode: 'Automatic', color: automatic };
+          }
+          const pageCandidates = [...(pageState ? pageState.explicitDark : []), automatic];
+          return { mode: 'Mixed', color: worstContrastColor(pageCandidates, state.darkBackground) };
+        }
+        if (entry.automaticDarkCount === 0 && entry.existingDark.size === 1) {
+          return { mode: 'Explicit', color: Array.from(entry.existingDark)[0] };
+        }
+        if (entry.automaticDarkCount === entry.count) {
+          return { mode: 'Automatic', color: automatic };
+        }
+        return { mode: 'Mixed', color: worstContrastColor([...entry.existingDark, automatic], state.darkBackground) };
+      }
+
+      function worstContrastColor(colors, background) {
+        return colors.reduce((worst, color) => {
+          if (!worst) return color;
+          return contrastRatio(color, background) < contrastRatio(worst, background) ? color : worst;
+        }, null) || '#000000';
+      }
+
+      function currentDarkContrast(entry, pageId = null) {
+        const automatic = automaticDarkColor(entry.color);
+        const pageState = pageId ? entry.pageDark.get(pageId) : null;
+        const explicit = pageState ? Array.from(pageState.explicitDark) : Array.from(entry.existingDark);
+        const automaticCount = pageState ? pageState.automaticCount : entry.automaticDarkCount;
+        const candidates = automaticCount > 0 ? [...explicit, automatic] : explicit;
+        return Math.min(...candidates.map(color => contrastRatio(color, state.darkBackground)));
+      }
+
+      function hasChanges() {
+        return state.overrides.size > 0 || Array.from(state.mappings.values()).some(mapping => mapping.enabled);
+      }
+
+      function updateGenerateButton() {
+        elements.downloadButton.disabled = !state.colors.size || !hasChanges();
+      }
+
+      function renderMappingList() {
+        const entries = Array.from(state.colors.values()).sort((a, b) => b.count - a.count || a.color.localeCompare(b.color));
+        if (!entries.length) {
+          elements.mappingList.innerHTML = '<div class="empty-colors">No shapes or connectors with text were found.</div>';
+          elements.downloadButton.disabled = true;
+          return;
+        }
+        elements.mappingList.innerHTML = entries.map(entry => {
+          const mapping = state.mappings.get(entry.color);
+          const current = currentDarkState(entry);
+          const lightCurrentRatio = contrastRatio(entry.color, state.lightBackground);
+          const darkCurrentRatio = currentDarkContrast(entry);
+          const newLightRatio = contrastRatio(mapping.light, state.lightBackground);
+          const newDarkRatio = contrastRatio(mapping.dark, state.darkBackground);
+          const examples = Array.from(entry.examples).join(', ') || 'Text label';
+          const pageRows = state.pages.filter(page => entry.pages.has(page.id)).map(page => {
+            const key = overrideKey(page.id, entry.color);
+            const override = state.overrides.get(key);
+            const pageCurrent = currentDarkState(entry, page.id);
+            const pageRatio = currentDarkContrast(entry, page.id);
+            return `
+              <div class="override-row" data-page-id="${escapeHtml(page.id)}" data-color="${entry.color}">
+                <span class="override-name" title="${escapeHtml(page.name)}">${escapeHtml(page.name)} · ${entry.pages.get(page.id)} locations · Current dark: ${pageCurrent.mode}${pageCurrent.mode === 'Explicit' ? ` ${pageCurrent.color}` : ''} · ${pageRatio.toFixed(1)}:1</span>
+                <label class="override-toggle"><input class="override-enabled" type="checkbox" ${override ? 'checked' : ''}> Override</label>
+                <span class="override-colors">
+                  <label>Light <input class="override-color override-light" type="color" value="${override ? override.light : mapping.light}" ${override ? '' : 'disabled'} aria-label="New light color for ${escapeHtml(page.name)}"></label>
+                  <label>Dark <input class="override-color override-dark" type="color" value="${override ? override.dark : mapping.dark}" ${override ? '' : 'disabled'} aria-label="New dark color for ${escapeHtml(page.name)}"></label>
+                </span>
+              </div>`;
+          }).join('');
+          return `
+            <article class="mapping-row${mapping.enabled ? ' enabled' : ''}" data-color="${entry.color}">
+              <div class="mapping-main">
+                <div class="color-source">
+                  <span class="swatch" style="background:${entry.color}"></span>
+                  <div class="color-text"><div class="mode-label">Current light</div><div class="color-code">${entry.color}</div><div class="example" title="${escapeHtml(examples)}">${escapeHtml(examples)}</div><div class="mode-contrast light-current-contrast ${lightCurrentRatio < 4.5 ? 'low' : ''}">${lightCurrentRatio.toFixed(1)} : 1 · ${lightCurrentRatio < 4.5 ? 'Low contrast' : 'Readable'}</div></div>
+                </div>
+                <div class="arrow arrow-current" aria-hidden="true">→</div>
+                <div class="color-current">
+                  <span class="swatch${current.mode === 'Explicit' ? '' : ' auto'}" style="background-color:${current.color}"></span>
+                  <div class="color-text"><div class="mode-label">Current dark</div><div class="color-code">${current.mode === 'Explicit' ? current.color : current.mode}</div><div class="current-note">${current.mode === 'Explicit' ? 'Saved in file' : current.mode === 'Automatic' ? `Estimated ${current.color}` : `Worst case ${current.color}`}</div><div class="mode-contrast dark-current-contrast ${darkCurrentRatio < 4.5 ? 'low' : ''}">${darkCurrentRatio.toFixed(1)} : 1 · ${darkCurrentRatio < 4.5 ? 'Low contrast' : 'Readable'}</div></div>
+                </div>
+                <div class="arrow arrow-new" aria-hidden="true">→</div>
+                <div class="color-target">
+                  <label class="mapping-toggle"><input class="mapping-enabled" type="checkbox" ${mapping.enabled ? 'checked' : ''}> Change mapping</label>
+                  <div class="change-line light-change">
+                    <span class="mode-name">Light</span>
+                    <input class="target-picker light-picker" type="color" value="${mapping.light}" ${mapping.enabled ? '' : 'disabled'} aria-label="New light color for ${entry.color}">
+                    <div class="target-preview light-preview" style="color:${mapping.light};background:${state.lightBackground}">Text Aa</div>
+                  </div>
+                  <div class="change-line dark-change">
+                    <span class="mode-name">Dark</span>
+                    <input class="target-picker dark-picker" type="color" value="${mapping.dark}" ${mapping.enabled ? '' : 'disabled'} aria-label="New dark color for ${entry.color}">
+                    <div class="target-preview dark-preview" style="color:${mapping.dark};background:${state.darkBackground}">Text Aa</div>
+                  </div>
+                </div>
+                <div class="contrast">
+                  <div class="contrast-line light-new-contrast ${mapping.enabled && newLightRatio < 4.5 ? 'low' : 'good'}"><strong>${mapping.enabled ? `Target light ${newLightRatio.toFixed(1)} : 1` : 'Mapping unchanged'}</strong>${mapping.enabled ? (newLightRatio >= 4.5 ? 'Good contrast' : 'Low contrast') : ''}</div>
+                  <div class="contrast-line dark-new-contrast ${mapping.enabled && newDarkRatio < 4.5 ? 'low' : 'good'}">${mapping.enabled ? `<strong>Target dark ${newDarkRatio.toFixed(1)} : 1</strong>${newDarkRatio >= 4.5 ? 'Good contrast' : 'Low contrast'}` : ''}</div>
+                </div>
+                <div class="usage">${entry.count} locations · ${entry.pages.size} pages</div>
+              </div>
+              ${pageRows ? `<details class="overrides"><summary>Set per-page overrides</summary><div class="override-list">${pageRows}</div></details>` : ''}
+            </article>`;
+        }).join('');
+        updateGenerateButton();
+      }
+
+      function updateMappingRow(mappingRow, color) {
+        const mapping = state.mappings.get(color);
+        if (!mapping) return;
+        const entry = state.colors.get(color);
+        const current = currentDarkState(entry);
+        const lightCurrentRatio = contrastRatio(entry.color, state.lightBackground);
+        const darkCurrentRatio = currentDarkContrast(entry);
+        const newLightRatio = contrastRatio(mapping.light, state.lightBackground);
+        const newDarkRatio = contrastRatio(mapping.dark, state.darkBackground);
+        mappingRow.classList.toggle('enabled', mapping.enabled);
+        mappingRow.querySelector('.light-picker').disabled = !mapping.enabled;
+        mappingRow.querySelector('.dark-picker').disabled = !mapping.enabled;
+        const currentSwatch = mappingRow.querySelector('.color-current .swatch');
+        currentSwatch.classList.toggle('auto', current.mode !== 'Explicit');
+        currentSwatch.style.backgroundColor = current.color;
+        const currentCode = mappingRow.querySelector('.color-current .color-code');
+        const currentNote = mappingRow.querySelector('.color-current .current-note');
+        currentCode.textContent = current.mode === 'Explicit' ? current.color : current.mode;
+        currentNote.textContent = current.mode === 'Explicit' ? 'Saved in file' : current.mode === 'Automatic' ? `Estimated ${current.color}` : `Worst case ${current.color}`;
+        const lightCurrent = mappingRow.querySelector('.light-current-contrast');
+        const darkCurrent = mappingRow.querySelector('.dark-current-contrast');
+        lightCurrent.className = `mode-contrast light-current-contrast ${lightCurrentRatio < 4.5 ? 'low' : ''}`;
+        lightCurrent.textContent = `${lightCurrentRatio.toFixed(1)} : 1 · ${lightCurrentRatio < 4.5 ? 'Low contrast' : 'Readable'}`;
+        darkCurrent.className = `mode-contrast dark-current-contrast ${darkCurrentRatio < 4.5 ? 'low' : ''}`;
+        darkCurrent.textContent = `${darkCurrentRatio.toFixed(1)} : 1 · ${darkCurrentRatio < 4.5 ? 'Low contrast' : 'Readable'}`;
+        const lightPreview = mappingRow.querySelector('.light-preview');
+        const darkPreview = mappingRow.querySelector('.dark-preview');
+        lightPreview.style.color = mapping.light;
+        lightPreview.style.background = state.lightBackground;
+        darkPreview.style.color = mapping.dark;
+        darkPreview.style.background = state.darkBackground;
+        const lightNew = mappingRow.querySelector('.light-new-contrast');
+        const darkNew = mappingRow.querySelector('.dark-new-contrast');
+        lightNew.className = `contrast-line light-new-contrast ${mapping.enabled && newLightRatio < 4.5 ? 'low' : 'good'}`;
+        lightNew.innerHTML = `<strong>${mapping.enabled ? `Target light ${newLightRatio.toFixed(1)} : 1` : 'Mapping unchanged'}</strong>${mapping.enabled ? (newLightRatio >= 4.5 ? 'Good contrast' : 'Low contrast') : ''}`;
+        darkNew.className = `contrast-line dark-new-contrast ${mapping.enabled && newDarkRatio < 4.5 ? 'low' : 'good'}`;
+        darkNew.innerHTML = mapping.enabled ? `<strong>Target dark ${newDarkRatio.toFixed(1)} : 1</strong>${newDarkRatio >= 4.5 ? 'Good contrast' : 'Low contrast'}` : '';
+        mappingRow.querySelectorAll('.override-row').forEach(row => {
+          const key = overrideKey(row.dataset.pageId, color);
+          if (!state.overrides.has(key)) {
+            row.querySelector('.override-light').value = mapping.light;
+            row.querySelector('.override-dark').value = mapping.dark;
+          }
+        });
+      }
+
+      function updateAllPreviews() {
+        elements.mappingList.querySelectorAll('.mapping-row').forEach(row => updateMappingRow(row, row.dataset.color));
+      }
+
+      function renderIconList() {
+        const icons = [...state.opaqueIcons].sort((a, b) => a.pageName.localeCompare(b.pageName) || a.label.localeCompare(b.label));
+        if (!icons.length) {
+          elements.iconList.innerHTML = '<div class="icon-empty">No icons with an explicit non-transparent background were found.</div>';
+          return;
+        }
+        elements.iconList.innerHTML = icons.map(icon => {
+          const parsed = parseColorValue(icon.fillColor);
+          const swatchColor = parsed ? parsed.light : (normalizeHex(icon.fillColor) || '#FFFFFF');
+          return `
+            <div class="icon-row">
+              <div class="icon-name" title="${escapeHtml(icon.label)}">${escapeHtml(icon.label)}</div>
+              <div class="icon-meta">${escapeHtml(icon.pageName)} · ${escapeHtml(icon.kind)}</div>
+              <div class="icon-fill"><span class="swatch" style="background:${swatchColor}"></span>${escapeHtml(icon.fillColor)}</div>
+              <div class="icon-meta">${escapeHtml(icon.fillProperty)}${icon.opacity < 100 ? ` · ${icon.opacity}%` : ''} · ID ${escapeHtml(icon.cellId || '—')}</div>
+            </div>`;
+        }).join('');
+      }
+
+      function renderWorkspace() {
+        elements.dropZone.style.display = 'none';
+        elements.workspace.classList.add('active');
+        elements.fileName.textContent = state.file.name;
+        const compressedCount = state.pages.filter(page => page.compressed).length;
+        elements.fileMeta.textContent = `${formatBytes(state.file.size)} · ${state.pages.length} pages · ${compressedCount ? `${compressedCount} compressed pages` : 'Uncompressed format'}`;
+        elements.pageCount.textContent = state.pages.length;
+        elements.colorCount.textContent = state.colors.size;
+        elements.usageCount.textContent = Array.from(state.colors.values()).reduce((sum, item) => sum + item.count, 0);
+        elements.iconCount.textContent = state.opaqueIcons.length;
+        const uniqueWarnings = Array.from(new Set(state.warnings));
+        elements.notice.classList.toggle('visible', uniqueWarnings.length > 0);
+        elements.notice.textContent = uniqueWarnings.length ? `${uniqueWarnings.length} color values could not be parsed. Review the generated file in draw.io.` : '';
+        renderMappingList();
+        renderIconList();
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+      }
+
+      function mappedColorValue(original, mapping) {
+        return `light-dark(${mapping.light.toUpperCase()},${mapping.dark.toUpperCase()})`;
+      }
+
+      function transformInlineHtml(html, pageId) {
+        let output = html;
+        const cssRegex = /(^|[;"'\s])color\s*:\s*(light-dark\(\s*#[0-9a-f]{3,6}\s*,\s*#[0-9a-f]{3,6}\s*\)|#[0-9a-f]{3,6})/gi;
+        output = output.replace(cssRegex, (whole, prefix, raw) => {
+          const parsed = parseColorValue(raw);
+          const mapping = parsed && resolveMapping(pageId, parsed.light);
+          return mapping ? `${prefix}color:${mappedColorValue(parsed, mapping)}` : whole;
+        });
+
+        output = output.replace(/<font\b[^>]*>/gi, tag => {
+          const colorAttr = tag.match(/\scolor\s*=\s*(["'])([^"']+)\1/i);
+          if (!colorAttr) return tag;
+          const parsed = parseColorValue(colorAttr[2]);
+          const mapping = parsed && resolveMapping(pageId, parsed.light);
+          if (!mapping) return tag;
+          const expression = mappedColorValue(parsed, mapping);
+          let next = tag.replace(colorAttr[0], '');
+          const styleAttr = next.match(/\sstyle\s*=\s*(["'])([^"']*)\1/i);
+          if (styleAttr) {
+            if (/\bcolor\s*:/i.test(styleAttr[2])) return next;
+            const separator = styleAttr[2] && !styleAttr[2].trim().endsWith(';') ? ';' : '';
+            const newStyle = `${styleAttr[2]}${separator}color:${expression}`;
+            return next.replace(styleAttr[0], ` style=${styleAttr[1]}${newStyle}${styleAttr[1]}`);
+          }
+          return next.replace(/>$/, ` style="color:${expression}">`);
+        });
+        return output;
+      }
+
+      function applyMappingsToPage(page) {
+        let changed = false;
+        const cells = Array.from(page.modelElement.getElementsByTagName('*')).filter(el => localName(el) === 'mxCell');
+        for (const cell of cells) {
+          const target = labelTarget(cell);
+          const text = plainText(target.value);
+          if (!text) continue;
+          const inlineColors = extractInlineColors(target.value);
+          if (inlineColors.length) {
+            const transformed = transformInlineHtml(target.value, page.id);
+            if (transformed !== target.value) {
+              target.element.setAttribute(target.attribute, transformed);
+              changed = true;
+            }
+          }
+
+          const style = cell.getAttribute('style') || '';
+          const raw = readStyleValue(style, 'fontColor');
+          const parsed = parseColorValue(raw);
+          if (parsed) {
+            const mapping = resolveMapping(page.id, parsed.light);
+            if (mapping) {
+              const nextStyle = setStyleValue(style, 'fontColor', mappedColorValue(parsed, mapping));
+              if (nextStyle !== style) {
+                cell.setAttribute('style', nextStyle);
+                changed = true;
+              }
+            }
+          } else if (!raw && !inlineColors.length) {
+            const mapping = resolveMapping(page.id, '#000000');
+            if (mapping) {
+              cell.setAttribute('style', setStyleValue(style, 'fontColor', mappedColorValue({ light: '#000000', dark: null }, mapping)));
+              changed = true;
+            }
+          }
+        }
+        if (changed) page.modelElement.setAttribute('adaptiveColors', 'auto');
+        return changed;
+      }
+
+      async function buildOutput() {
+        const outputDocument = await loadDrawioDocument(state.sourceText);
+        const changedPages = new Set(outputDocument.pages.filter(applyMappingsToPage).map(page => page.id));
+        if (!outputDocument.directModel) {
+          for (const page of outputDocument.pages) {
+            if (!page.compressed || !changedPages.has(page.id)) continue;
+            const modelXml = XML_SERIALIZER.serializeToString(page.modelElement);
+            page.diagramElement.textContent = await compressDiagram(modelXml);
+          }
+        }
+        let output = XML_SERIALIZER.serializeToString(outputDocument.outerDocument);
+        if (state.hadXmlDeclaration && !/^\s*<\?xml/i.test(output)) output = `<?xml version="1.0" encoding="UTF-8"?>\n${output}`;
+        return output;
+      }
+
+      function outputFilename(name) {
+        const match = name.match(/(\.drawio|\.xml)$/i);
+        const extension = match ? match[1] : '.drawio';
+        const base = match ? name.slice(0, -extension.length) : name;
+        return `${base}-color-mappings${extension}`;
+      }
+
+      async function downloadOutput() {
+        elements.downloadButton.disabled = true;
+        elements.downloadButton.textContent = 'Generating…';
+        try {
+          const output = await buildOutput();
+          const url = URL.createObjectURL(new Blob([output], { type: 'application/xml;charset=utf-8' }));
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = outputFilename(state.file.name);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          showToast(`Generated ${link.download}`);
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || 'Could not generate the file.', true);
+        } finally {
+          elements.downloadButton.textContent = 'Generate new file';
+          updateGenerateButton();
+        }
+      }
+
+      async function handleFile(file) {
+        if (!file) return;
+        if (!/\.(drawio|xml)$/i.test(file.name)) {
+          showToast('Choose a .drawio or .xml file.', true);
+          return;
+        }
+        elements.dropZone.classList.remove('dragging');
+        const originalText = elements.dropZone.querySelector('h2').textContent;
+        elements.dropZone.querySelector('h2').textContent = 'Reading file…';
+        try {
+          await parseFile(file);
+          renderWorkspace();
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || 'Could not read the file.', true);
+        } finally {
+          elements.dropZone.querySelector('h2').textContent = originalText;
+          elements.fileInput.value = '';
+        }
+      }
+
+      elements.fileInput.addEventListener('change', event => handleFile(event.target.files[0]));
+      elements.changeFile.addEventListener('click', () => elements.fileInput.click());
+      elements.resetMappings.addEventListener('click', () => { initializeMappings(); renderMappingList(); showToast('Changes have been reset.'); });
+      elements.downloadButton.addEventListener('click', downloadOutput);
+      elements.lightBackground.addEventListener('input', event => {
+        state.lightBackground = event.target.value.toUpperCase();
+        updateAllPreviews();
+      });
+      elements.darkBackground.addEventListener('input', event => {
+        state.darkBackground = event.target.value.toUpperCase();
+        updateAllPreviews();
+      });
+
+      elements.mappingList.addEventListener('input', event => {
+        const mappingRow = event.target.closest('.mapping-row');
+        if (!mappingRow) return;
+        const color = mappingRow.dataset.color;
+        if (event.target.classList.contains('mapping-enabled')) {
+          state.mappings.get(color).enabled = event.target.checked;
+          updateMappingRow(mappingRow, color);
+          updateGenerateButton();
+          return;
+        }
+        if (event.target.classList.contains('light-picker')) {
+          state.mappings.get(color).light = event.target.value.toUpperCase();
+          updateMappingRow(mappingRow, color);
+          return;
+        }
+        if (event.target.classList.contains('dark-picker')) {
+          state.mappings.get(color).dark = event.target.value.toUpperCase();
+          updateMappingRow(mappingRow, color);
+          return;
+        }
+        const overrideRow = event.target.closest('.override-row');
+        if (!overrideRow) return;
+        const key = overrideKey(overrideRow.dataset.pageId, color);
+        if (event.target.classList.contains('override-enabled')) {
+          const colorInputs = overrideRow.querySelectorAll('.override-color');
+          const mapping = state.mappings.get(color);
+          if (event.target.checked) {
+            state.overrides.set(key, { light: mapping.light, dark: mapping.dark });
+            overrideRow.querySelector('.override-light').value = mapping.light;
+            overrideRow.querySelector('.override-dark').value = mapping.dark;
+            colorInputs.forEach(input => { input.disabled = false; });
+          } else {
+            state.overrides.delete(key);
+            overrideRow.querySelector('.override-light').value = mapping.light;
+            overrideRow.querySelector('.override-dark').value = mapping.dark;
+            colorInputs.forEach(input => { input.disabled = true; });
+          }
+          updateGenerateButton();
+        } else if (event.target.classList.contains('override-color')) {
+          const current = state.overrides.get(key) || {
+            light: state.mappings.get(color).light,
+            dark: state.mappings.get(color).dark
+          };
+          if (event.target.classList.contains('override-light')) current.light = event.target.value.toUpperCase();
+          if (event.target.classList.contains('override-dark')) current.dark = event.target.value.toUpperCase();
+          state.overrides.set(key, current);
+        }
+      });
+
+      ['dragenter', 'dragover'].forEach(type => elements.dropZone.addEventListener(type, event => {
+        event.preventDefault();
+        elements.dropZone.classList.add('dragging');
+      }));
+      ['dragleave', 'drop'].forEach(type => elements.dropZone.addEventListener(type, event => {
+        event.preventDefault();
+        elements.dropZone.classList.remove('dragging');
+      }));
+      elements.dropZone.addEventListener('drop', event => handleFile(event.dataTransfer.files[0]));
+    })();
+  </script>
+</body>
+</html>
